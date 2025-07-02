@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('./partials/head') %>
+  <title>Blogify - Share Your Stories</title>
+</head>
+<body>
+  <%- include('./partials/nav') %>
+
+  <!-- Hero Section -->
+  <div class="hero-section py-5">
+    <div class="container text-center">
+      <h1 class="display-4 fw-bold mb-3">Welcome to Blogify</h1>
+      <p class="lead mb-4">Discover amazing stories and share your own</p>
+      <% if (locals.user) { %>
+        <a href="/blog/add-new" class="btn btn-light btn-lg">Write Your Story</a>
+      <% } else { %>
+        <a href="/user/signup" class="btn btn-light btn-lg">Join Our Community</a>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Blog Posts -->
+  <div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Latest Posts</h2>
+      <% if (locals.user) { %>
+        <a href="/blog/add-new" class="btn btn-primary">
+          <i class="fas fa-plus me-1"></i>New Post
+        </a>
+      <% } %>
+    </div>
+
+    <% if (blogs && blogs.length > 0) { %>
+      <div class="row">
+        <% blogs.forEach(blog => { %>
+          <div class="col-md-6 col-lg-4 mb-4" data-aos="fade-up">
+            <div class="card blog-card h-100">
+              <% if (blog.coverImageURL) { %>
+                <img src="<%= blog.coverImageURL %>" class="card-img-top blog-image" alt="<%= blog.title %>">
+              <% } %>
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title"><%= blog.title %></h5>
+                <p class="card-text text-muted">
+                  <%= blog.body.substring(0, 100) %>...
+                </p>
+                <div class="mt-auto">
+                  <div class="d-flex align-items-center mb-3">
+                    <img src="<%= blog.createdBy.profileImageURL %>" class="rounded-circle me-2" width="30" height="30">
+                    <small class="text-muted">
+                      By <%= blog.createdBy.fullName %> • 
+                      <%= new Date(blog.createdAt).toLocaleDateString() %>
+                    </small>
+                  </div>
+                  <a href="/blog/<%= blog._id %>" class="btn btn-outline-primary">Read More</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="text-center py-5">
+        <i class="fas fa-blog display-1 text-muted mb-3"></i>
+        <h3 class="text-muted">No posts yet</h3>
+        <p class="text-muted">Be the first to share your story!</p>
+        <% if (locals.user) { %>
+          <a href="/blog/add-new" class="btn btn-primary">Create First Post</a>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+
+  <%- include('./partials/scripts') %>
+</body>
+</html>
