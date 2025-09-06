@@ -27,10 +27,35 @@ const blogSchema = new Schema(
     views: {
       type: Number,
       default: 0
+    },
+    likes: [{
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: "user"
+      }
+    }],
+    status: {
+      type: String,
+      enum: ['published', 'draft'],
+      default: 'published'
+    },
+    readTime: {
+      type: Number,
+      default: 5
     }
   },
   { timestamps: true }
 );
+
+// Calculate read time before saving
+blogSchema.pre('save', function(next) {
+  if (this.body) {
+    const wordsPerMinute = 200;
+    const wordCount = this.body.split(' ').length;
+    this.readTime = Math.ceil(wordCount / wordsPerMinute);
+  }
+  next();
+});
 
 const Blog = model("blog", blogSchema);
 module.exports = Blog;
