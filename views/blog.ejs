@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <%- include('./partials/head') %>
-  <title><%= blog.title %> - Blogify</title>
+  <title><%= blog.title %> - Blogify Pro</title>
+  <meta name="description" content="<%= blog.body.substring(0, 160) %>...">
 </head>
 <body>
   <%- include('./partials/nav') %>
@@ -10,36 +11,102 @@
   <div class="container py-5">
     <div class="row">
       <div class="col-lg-8 mx-auto">
-        <article>
-          <header class="text-center mb-4">
-            <h1 class="display-5 fw-bold mb-3"><%= blog.title %></h1>
-            <div class="d-flex align-items-center justify-content-center mb-3">
-              <i class="fas fa-user-circle fa-2x text-black me-3"></i>
-              <div>
-                <h6 class="mb-0"><%= blog.createdBy.fullName %></h6>
-                <small class="text-muted">
-                  <%= new Date(blog.createdAt).toLocaleDateString() %> • <%= blog.views %> views
-                </small>
+        <article data-aos="fade-up">
+          <!-- Back Button -->
+          <div class="mb-4">
+            <button onclick="history.back()" class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i>Back
+            </button>
+          </div>
+
+          <header class="text-center mb-5">
+            <h1 class="display-5 fw-bold mb-4"><%= blog.title %></h1>
+            
+            <div class="d-flex align-items-center justify-content-center mb-4">
+              <img src="<%= blog.createdBy.profileImageURL %>" class="rounded-circle me-3" width="50" height="50">
+              <div class="text-start">
+                <h6 class="mb-0 fw-semibold"><%= blog.createdBy.fullName %></h6>
+                <div class="text-muted small">
+                  <%= new Date(blog.createdAt).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  }) %>
+                  • <%= blog.readTime %> min read
+                  • <span id="viewCount"><%= blog.views %></span> views
+                </div>
               </div>
+            </div>
+
+            <!-- Article Actions -->
+            <div class="d-flex justify-content-center gap-3 mb-4">
+              <% if (locals.user) { %>
+                <button class="like-btn <%= blog.likes && blog.likes.some(like => like.user.toString() === user._id.toString()) ? 'liked' : '' %>" 
+                        onclick="toggleLike('<%= blog._id %>')" 
+                        data-blog-id="<%= blog._id %>">
+                  <i class="fas fa-heart"></i>
+                  <span class="like-count"><%= blog.likes ? blog.likes.length : 0 %></span>
+                </button>
+              <% } %>
+              <button class="btn btn-outline-primary btn-sm" onclick="shareArticle()">
+                <i class="fas fa-share me-1"></i>Share
+              </button>
             </div>
           </header>
 
           <% if (blog.coverImageURL) { %>
-            <img src="<%= blog.coverImageURL %>" class="img-fluid rounded mb-4" alt="<%= blog.title %>">
+            <div class="text-center mb-5">
+              <img src="<%= blog.coverImageURL %>" class="img-fluid rounded shadow" alt="<%= blog.title %>">
+            </div>
           <% } %>
 
-          <div class="blog-content">
-            <p><%= blog.body %></p>
+          <div class="blog-content fs-5 lh-lg">
+            <% blog.body.split('\n').forEach(paragraph => { %>
+              <% if (paragraph.trim()) { %>
+                <p class="mb-4"><%= paragraph %></p>
+              <% } %>
+            <% }) %>
           </div>
 
           <% if (blog.tags && blog.tags.length > 0) { %>
-            <div class="mt-4">
-              <% blog.tags.forEach(tag => { %>
-                <span class="badge bg-secondary me-1">#<%= tag %></span>
-              <% }) %>
+            <div class="mt-5">
+              <h6 class="fw-semibold mb-3">Tags</h6>
+              <div class="d-flex flex-wrap">
+                <% blog.tags.forEach(tag => { %>
+                  <a href="/?tag=<%= tag %>" class="tag me-2 mb-2">#<%= tag %></a>
+                <% }) %>
+              </div>
             </div>
           <% } %>
         </article>
+
+        <!-- Related Articles -->
+        <% if (relatedBlogs && relatedBlogs.length > 0) { %>
+          <section class="mt-5" data-aos="fade-up">
+            <h4 class="fw-bold mb-4">Related Articles</h4>
+            <div class="row">
+              <% relatedBlogs.forEach(relatedBlog => { %>
+                <div class="col-md-4 mb-4">
+                  <div class="card h-100 border-0 shadow-sm">
+                    <% if (relatedBlog.coverImageURL) { %>
+                      <img src="<%= relatedBlog.coverImageURL %>" class="card-img-top" style="height: 150px; object-fit: cover;">
+                    <% } %>
+                    <div class="card-body">
+                      <h6 class="card-title">
+                        <a href="/blog/<%= relatedBlog._id %>" class="text-decoration-none text-dark">
+                          <%= relatedBlog.title %>
+                        </a>
+                      </h6>
+                      <small class="text-muted">
+                        By <%= relatedBlog.createdBy.fullName %>
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </section>
+        <% } %>
       </div>
     </div>
   </div>
@@ -49,50 +116,134 @@
     <div class="container">
       <div class="row">
         <div class="col-lg-8 mx-auto">
-          <h3 class="mb-4">Comments (<%= comments.length %>)</h3>
+          <h3 class="fw-bold mb-4">
+            <i class="fas fa-comments me-2"></i>
+            Discussion (<%= comments.length %>)
+          </h3>
 
           <% if (locals.user) { %>
-            <div class="card mb-4">
-              <div class="card-body">
-                <form action="/blog/comment/<%= blog._id %>" method="post">
-                  <div class="mb-3">
-                    <textarea name="content" class="form-control" rows="3" placeholder="Share your thoughts..." required></textarea>
+            <div class="comment-item mb-4" data-aos="fade-up">
+              <form action="/blog/comment/<%= blog._id %>" method="post">
+                <div class="d-flex">
+                  <img src="<%= user.profileImageURL %>" class="rounded-circle me-3" width="40" height="40">
+                  <div class="flex-grow-1">
+                    <textarea 
+                      name="content" 
+                      class="form-control mb-3" 
+                      rows="3" 
+                      placeholder="Share your thoughts about this article..."
+                      required
+                    ></textarea>
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-paper-plane me-1"></i>Post Comment
+                    </button>
                   </div>
-                  <button type="submit" class="btn btn-primary">Post Comment</button>
-                </form>
-              </div>
+                </div>
+              </form>
             </div>
           <% } else { %>
-            <div class="card mb-4 bg-light">
-              <div class="card-body text-center">
-                <p>Please <a href="/user/signin">sign in</a> to leave a comment.</p>
+            <div class="comment-item mb-4 text-center bg-primary text-white" data-aos="fade-up">
+              <p class="mb-3">Join the conversation!</p>
+              <div>
+                <a href="/user/signin" class="btn btn-light me-2">Sign In</a>
+                <a href="/user/signup" class="btn btn-outline-light">Sign Up</a>
               </div>
             </div>
           <% } %>
 
           <% if (comments.length > 0) { %>
-            <% comments.forEach(comment => { %>
-              <div class="comment-item">
+            <% comments.forEach((comment, index) => { %>
+              <div class="comment-item" data-aos="fade-up" data-aos-delay="<%= index * 100 %>">
                 <div class="d-flex">
-                  <i class="fas fa-user-circle fa-2x text-black me-3"></i>
-                  <div>
-                    <h6 class="mb-1"><%= comment.createdBy.fullName %></h6>
-                    <small class="text-muted"><%= new Date(comment.createdAt).toLocaleString() %></small>
-                    <p class="mt-2"><%= comment.content %></p>
+                  <img src="<%= comment.createdBy.profileImageURL %>" class="rounded-circle me-3" width="40" height="40">
+                  <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <h6 class="mb-0 fw-semibold"><%= comment.createdBy.fullName %></h6>
+                      <small class="text-muted">
+                        <%= new Date(comment.createdAt).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) %>
+                      </small>
+                    </div>
+                    <p class="mb-0"><%= comment.content %></p>
                   </div>
                 </div>
-                <hr>
               </div>
             <% }) %>
           <% } else { %>
-            <p class="text-muted">No comments yet. Be the first to comment!</p>
+            <div class="text-center py-4">
+              <i class="fas fa-comment-slash display-4 text-muted mb-3"></i>
+              <p class="text-muted">No comments yet. Be the first to share your thoughts!</p>
+            </div>
           <% } %>
-
         </div>
       </div>
     </div>
   </div>
 
   <%- include('./partials/scripts') %>
+
+  <script>
+    // Like functionality
+    async function toggleLike(blogId) {
+      try {
+        const response = await fetch(`/blog/like/${blogId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        const data = await response.json();
+        
+        const likeBtn = document.querySelector(`[data-blog-id="${blogId}"]`);
+        const likeCount = likeBtn.querySelector('.like-count');
+        
+        likeCount.textContent = data.likes;
+        
+        if (data.liked) {
+          likeBtn.classList.add('liked');
+        } else {
+          likeBtn.classList.remove('liked');
+        }
+      } catch (error) {
+        console.error('Failed to toggle like:', error);
+      }
+    }
+
+    // Share functionality
+    function shareArticle() {
+      const title = "<%= blog.title %>";
+      const url = window.location.href;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: title,
+          url: url
+        });
+      } else {
+        // Fallback - copy to clipboard
+        navigator.clipboard.writeText(url);
+        alert('Article link copied to clipboard!');
+      }
+    }
+
+    // Reading progress indicator
+    function updateReadingProgress() {
+      const article = document.querySelector('article');
+      const scrollTop = window.pageYOffset;
+      const docHeight = article.offsetHeight;
+      const winHeight = window.innerHeight;
+      const scrollPercent = scrollTop / (docHeight - winHeight);
+      const scrollPercentRounded = Math.round(scrollPercent * 100);
+      
+      // You can add a progress bar here if needed
+    }
+
+    window.addEventListener('scroll', updateReadingProgress);
+  </script>
 </body>
 </html>
