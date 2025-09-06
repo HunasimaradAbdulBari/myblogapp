@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
-    const fileName = `${Date.now()}-${file.originalname}`;
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}.${file.originalname.split('.').pop()}`;
     cb(null, fileName);
   },
 });
@@ -56,6 +56,17 @@ router.get("/:id", async (req, res) => {
       .populate("createdBy")
       .sort({ createdAt: -1 });
 
+    // Get related blogs
+    const relatedBlogs = await Blog.find({
+      _id: { $ne: req.params.id },
+      $or: [
+        { tags: { $in: blog.tags } },
+        { createdBy: blog.createdBy._id }
+      ]
+    })
+    .populate("createdBy")
+    .limit(3);
+
     // Increment view count
     blog.views += 1;
     await blog.save();
@@ -64,10 +75,30 @@ router.get("/:id", async (req, res) => {
       user: req.user,
       blog,
       comments,
+      relatedBlogs
     });
   } catch (error) {
     console.error("Error fetching blog:", error);
     return res.status(500).render("error", { user: req.user });
+  }
+});
+
+// Like/Unlike blog
+router.post("/like/:blogId", requireAuth, async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.blogId);
+    const userLiked = blog.likes.find(like => like.user.toString() === req.user._id.toString());
+
+    if (userLiked) {
+      blog.likes = blog.likes.filter(like => like.user.toString() !== req.user._id.toString());
+    } else {
+      blog.likes.push({ user: req.user._id });
+    }
+
+    await blog.save();
+    res.json({ likes: blog.likes.length, liked: !userLiked });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to toggle like' });
   }
 });
 
@@ -87,12 +118,13 @@ router.post("/comment/:blogId", requireAuth, async (req, res) => {
 
 router.post("/", requireAuth, upload.single("coverImage"), async (req, res) => {
   try {
-    const { title, body, tags } = req.body;
+    const { title, body, tags, status } = req.body;
     
     const blogData = {
       body,
       title,
       createdBy: req.user._id,
+      status: status || 'published'
     };
 
     if (req.file) {
