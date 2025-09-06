@@ -2,75 +2,376 @@
 <html lang="en">
 <head>
   <%- include('./partials/head') %>
-  <title>Blogify - Share Your Stories</title>
+  <title>Blogify Pro - Professional Blogging Platform</title>
 </head>
 <body>
   <%- include('./partials/nav') %>
 
   <!-- Hero Section -->
   <div class="hero-section py-5">
-    <div class="container text-center">
-      <h1 class="display-4 fw-bold mb-3">Welcome to Blogify</h1>
-      <p class="lead mb-4">Discover amazing stories and share your own</p>
-      <% if (locals.user) { %>
-        <a href="/blog/add-new" class="btn btn-light btn-lg">Write Your Story</a>
-      <% } else { %>
-        <a href="/user/signup" class="btn btn-light btn-lg">Join Our Community</a>
-      <% } %>
+    <div class="container">
+      <div class="hero-content text-center">
+        <h1 class="display-3 fw-bold mb-4" data-aos="fade-up">
+          Share Your <span class="text-warning">Stories</span><br>
+          Inspire the World
+        </h1>
+        <p class="lead mb-4 fs-5" data-aos="fade-up" data-aos-delay="200">
+          Join thousands of writers sharing their thoughts, experiences, and expertise
+        </p>
+        
+        <!-- Search Bar -->
+        <div class="search-container mb-4" data-aos="fade-up" data-aos-delay="400">
+          <form action="/" method="GET" class="d-flex">
+            <input 
+              type="text" 
+              name="search" 
+              value="<%= search %>" 
+              class="form-control search-input" 
+              placeholder="Search articles, topics, authors..."
+            >
+            <button type="submit" class="btn btn-primary search-btn">
+              <i class="fas fa-search"></i>
+            </button>
+          </form>
+        </div>
+
+        <% if (locals.user) { %>
+          <a href="/blog/add-new" class="btn btn-warning btn-lg px-5" data-aos="fade-up" data-aos-delay="600">
+            <i class="fas fa-pen me-2"></i>Start Writing
+          </a>
+        <% } else { %>
+          <a href="/user/signup" class="btn btn-warning btn-lg px-5" data-aos="fade-up" data-aos-delay="600">
+            <i class="fas fa-user-plus me-2"></i>Join Community
+          </a>
+        <% } %>
+      </div>
     </div>
   </div>
 
-  <!-- Blog Posts -->
   <div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Latest Posts</h2>
-      <% if (locals.user) { %>
-        <a href="/blog/add-new" class="btn btn-primary">
-          <i class="fas fa-plus me-1"></i>New Post
-        </a>
-      <% } %>
-    </div>
-
-    <% if (blogs && blogs.length > 0) { %>
-      <div class="row">
-        <% blogs.forEach(blog => { %>
-          <div class="col-md-6 col-lg-4 mb-4" data-aos="fade-up">
-            <div class="card blog-card h-100">
-              <% if (blog.coverImageURL) { %>
-                <img src="<%= blog.coverImageURL %>" class="card-img-top blog-image" alt="<%= blog.title %>">
-              <% } %>
-              <div class="card-body d-flex flex-column">
-                <h5 class="card-title"><%= blog.title %></h5>
-                <p class="card-text text-muted">
-                  <%= blog.body.substring(0, 100) %>...
-                </p>
-                <div class="mt-auto">
-                  <div class="d-flex align-items-center mb-3">
-                    <img src="<%= blog.createdBy.profileImageURL %>" class="rounded-circle me-2" width="30" height="30">
-                    <small class="text-muted">
-                      By <%= blog.createdBy.fullName %> • 
-                      <%= new Date(blog.createdAt).toLocaleDateString() %>
-                    </small>
-                  </div>
-                  <a href="/blog/<%= blog._id %>" class="btn btn-outline-primary">Read More</a>
-                </div>
+    <div class="row">
+      <!-- Main Content -->
+      <div class="col-lg-8">
+        <!-- Stats Cards -->
+        <div class="row mb-5">
+          <div class="col-md-4 mb-4">
+            <div class="stats-card mx-auto" data-aos="fade-up">
+              <div class="stats-landscape"></div>
+              <div class="stats-content">
+                <h5 class="mb-1 fw-bold" id="totalBlogs">Loading...</h5>
+                <p class="text-muted mb-0">Total Articles</p>
               </div>
             </div>
           </div>
-        <% }) %>
-      </div>
-    <% } else { %>
-      <div class="text-center py-5">
-        <i class="fas fa-blog display-1 text-muted mb-3"></i>
-        <h3 class="text-muted">No posts yet</h3>
-        <p class="text-muted">Be the first to share your story!</p>
-        <% if (locals.user) { %>
-          <a href="/blog/add-new" class="btn btn-primary">Create First Post</a>
+          <div class="col-md-4 mb-4">
+            <div class="stats-card mx-auto" data-aos="fade-up" data-aos-delay="200">
+              <div class="stats-landscape"></div>
+              <div class="stats-content">
+                <h5 class="mb-1 fw-bold" id="totalViews">Loading...</h5>
+                <p class="text-muted mb-0">Total Views</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-4">
+            <div class="stats-card mx-auto" data-aos="fade-up" data-aos-delay="400">
+              <div class="stats-landscape"></div>
+              <div class="stats-content">
+                <h5 class="mb-1 fw-bold"><%= (locals.user ? 'Welcome' : 'Join Us') %></h5>
+                <p class="text-muted mb-0">Community</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Tags -->
+        <% if (trendingTags && trendingTags.length > 0) { %>
+        <div class="mb-4" data-aos="fade-up">
+          <h6 class="fw-semibold mb-3">Trending Topics</h6>
+          <div class="d-flex flex-wrap">
+            <a href="/" class="tag <%= !tag ? 'active' : '' %>">All</a>
+            <% trendingTags.forEach(tagItem => { %>
+              <a href="/?tag=<%= tagItem._id %>" class="tag <%= tag === tagItem._id ? 'active' : '' %>">
+                #<%= tagItem._id %> (<%= tagItem.count %>)
+              </a>
+            <% }) %>
+          </div>
+        </div>
+        <% } %>
+
+        <!-- Blog Posts Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 class="fw-bold">
+              <% if (search) { %>
+                Search Results for "<%= search %>"
+              <% } else if (tag) { %>
+                Posts tagged with "<%= tag %>"
+              <% } else { %>
+                Latest Articles
+              <% } %>
+            </h2>
+            <p class="text-muted">
+              <% if (totalBlogs > 0) { %>
+                Showing <%= blogs.length %> of <%= totalBlogs %> articles
+              <% } %>
+            </p>
+          </div>
+          <% if (locals.user) { %>
+            <a href="/blog/add-new" class="btn btn-primary">
+              <i class="fas fa-plus me-1"></i>New Post
+            </a>
+          <% } %>
+        </div>
+
+        <!-- Blog Posts Grid -->
+        <% if (blogs && blogs.length > 0) { %>
+          <div class="row">
+            <% blogs.forEach((blog, index) => { %>
+              <div class="col-md-6 mb-4" data-aos="fade-up" data-aos-delay="<%= index * 100 %>">
+                <div class="blog-card h-100">
+                  <% if (blog.coverImageURL) { %>
+                    <div class="position-relative overflow-hidden">
+                      <img src="<%= blog.coverImageURL %>" class="card-img-top blog-image" alt="<%= blog.title %>">
+                      <div class="position-absolute top-0 end-0 p-3">
+                        <span class="badge bg-primary"><%= blog.readTime %> min read</span>
+                      </div>
+                    </div>
+                  <% } %>
+                  <div class="card-body d-flex flex-column p-4">
+                    <div class="d-flex align-items-center mb-3">
+                      <img src="<%= blog.createdBy.profileImageURL %>" class="rounded-circle me-2" width="32" height="32">
+                      <div>
+                        <small class="fw-semibold text-dark"><%= blog.createdBy.fullName %></small><br>
+                        <small class="text-muted">
+                          <%= new Date(blog.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                        </small>
+                      </div>
+                    </div>
+                    
+                    <h5 class="card-title fw-bold mb-3">
+                      <a href="/blog/<%= blog._id %>" class="text-decoration-none text-dark">
+                        <%= blog.title %>
+                      </a>
+                    </h5>
+                    
+                    <p class="card-text text-muted mb-3">
+                      <%= blog.body.substring(0, 120) %>...
+                    </p>
+                    
+                    <% if (blog.tags && blog.tags.length > 0) { %>
+                      <div class="mb-3">
+                        <% blog.tags.slice(0, 3).forEach(tag => { %>
+                          <span class="badge bg-light text-primary me-1">#<%= tag %></span>
+                        <% }) %>
+                      </div>
+                    <% } %>
+                    
+                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                      <div class="d-flex align-items-center text-muted">
+                        <i class="fas fa-eye me-1"></i>
+                        <small><%= blog.views %></small>
+                        <i class="fas fa-heart ms-3 me-1"></i>
+                        <small><%= blog.likes ? blog.likes.length : 0 %></small>
+                      </div>
+                      <a href="/blog/<%= blog._id %>" class="btn btn-outline-primary btn-sm">
+                        Read More <i class="fas fa-arrow-right ms-1"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+
+          <!-- Pagination -->
+          <% if (totalPages > 1) { %>
+            <nav aria-label="Blog pagination" class="mt-5">
+              <ul class="pagination justify-content-center">
+                <% if (currentPage > 1) { %>
+                  <li class="page-item">
+                    <a class="page-link" href="?page=<%= currentPage - 1 %><%= search ? '&search=' + search : '' %><%= tag ? '&tag=' + tag : '' %>">
+                      <i class="fas fa-chevron-left"></i>
+                    </a>
+                  </li>
+                <% } %>
+                
+                <% for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) { %>
+                  <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+                    <a class="page-link" href="?page=<%= i %><%= search ? '&search=' + search : '' %><%= tag ? '&tag=' + tag : '' %>">
+                      <%= i %>
+                    </a>
+                  </li>
+                <% } %>
+                
+                <% if (currentPage < totalPages) { %>
+                  <li class="page-item">
+                    <a class="page-link" href="?page=<%= currentPage + 1 %><%= search ? '&search=' + search : '' %><%= tag ? '&tag=' + tag : '' %>">
+                      <i class="fas fa-chevron-right"></i>
+                    </a>
+                  </li>
+                <% } %>
+              </ul>
+            </nav>
+          <% } %>
+          
+        <% } else { %>
+          <div class="text-center py-5">
+            <div class="mb-4">
+              <i class="fas fa-search display-1 text-muted"></i>
+            </div>
+            <h3 class="text-muted mb-3">
+              <% if (search || tag) { %>
+                No articles found
+              <% } else { %>
+                No articles yet
+              <% } %>
+            </h3>
+            <p class="text-muted mb-4">
+              <% if (search || tag) { %>
+                Try adjusting your search criteria
+              <% } else { %>
+                Be the first to share your story!
+              <% } %>
+            </p>
+            <% if (locals.user && !search && !tag) { %>
+              <a href="/blog/add-new" class="btn btn-primary">Create First Post</a>
+            <% } else if (search || tag) { %>
+              <a href="/" class="btn btn-outline-primary">View All Posts</a>
+            <% } %>
+          </div>
         <% } %>
       </div>
-    <% } %>
+
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <!-- Popular Posts -->
+        <% if (popularBlogs && popularBlogs.length > 0) { %>
+          <div class="sidebar-card" data-aos="fade-left">
+            <h6 class="fw-bold mb-3">
+              <i class="fas fa-fire text-warning me-2"></i>Popular Posts
+            </h6>
+            <% popularBlogs.forEach(blog => { %>
+              <div class="d-flex mb-3">
+                <% if (blog.coverImageURL) { %>
+                  <img src="<%= blog.coverImageURL %>" class="rounded me-3" width="60" height="60" style="object-fit: cover;">
+                <% } %>
+                <div class="flex-grow-1">
+                  <h6 class="mb-1">
+                    <a href="/blog/<%= blog._id %>" class="text-decoration-none text-dark">
+                      <%= blog.title.substring(0, 50) %>...
+                    </a>
+                  </h6>
+                  <small class="text-muted">
+                    <i class="fas fa-eye me-1"></i><%= blog.views %> views
+                  </small>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+
+        <!-- Quick Actions -->
+        <% if (locals.user) { %>
+          <div class="sidebar-card" data-aos="fade-left" data-aos-delay="200">
+            <h6 class="fw-bold mb-3">
+              <i class="fas fa-lightning-bolt text-primary me-2"></i>Quick Actions
+            </h6>
+            <div class="d-grid gap-2">
+              <a href="/blog/add-new" class="btn btn-outline-primary">
+                <i class="fas fa-plus me-2"></i>Write New Post
+              </a>
+              <button class="btn btn-outline-secondary" onclick="shareApp()">
+                <i class="fas fa-share me-2"></i>Share Blogify
+              </button>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="sidebar-card" data-aos="fade-left" data-aos-delay="200">
+            <h6 class="fw-bold mb-3">Join Our Community</h6>
+            <p class="text-muted mb-3">Start your blogging journey today!</p>
+            <div class="d-grid gap-2">
+              <a href="/user/signup" class="btn btn-primary">Sign Up Free</a>
+              <a href="/user/signin" class="btn btn-outline-primary">Sign In</a>
+            </div>
+          </div>
+        <% } %>
+
+        <!-- Platform Features -->
+        <div class="sidebar-card" data-aos="fade-left" data-aos-delay="400">
+          <h6 class="fw-bold mb-3">
+            <i class="fas fa-star text-warning me-2"></i>Platform Features
+          </h6>
+          <ul class="list-unstyled">
+            <li class="mb-2">
+              <i class="fas fa-check text-success me-2"></i>
+              Rich Text Editor
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-check text-success me-2"></i>
+              Image Upload Support
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-check text-success me-2"></i>
+              Tag Management
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-check text-success me-2"></i>
+              Comments System
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-check text-success me-2"></i>
+              Analytics Dashboard
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
 
   <%- include('./partials/scripts') %>
+  
+  <script>
+    // Fetch and display stats
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        document.getElementById('totalBlogs').textContent = data.totalBlogs.toLocaleString();
+        document.getElementById('totalViews').textContent = data.totalViews.toLocaleString();
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+        document.getElementById('totalBlogs').textContent = '<%= totalBlogs %>';
+        document.getElementById('totalViews').textContent = 'N/A';
+      }
+    }
+
+    // Share functionality
+    function shareApp() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'Blogify Pro',
+          text: 'Check out this amazing blogging platform!',
+          url: window.location.origin
+        });
+      } else {
+        // Fallback - copy to clipboard
+        navigator.clipboard.writeText(window.location.origin);
+        alert('Link copied to clipboard!');
+      }
+    }
+
+    // Load stats on page load
+    document.addEventListener('DOMContentLoaded', loadStats);
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+          behavior: 'smooth'
+        });
+      });
+    });
+  </script>
 </body>
 </html>
