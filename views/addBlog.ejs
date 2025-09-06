@@ -2,48 +2,184 @@
 <html lang="en">
 <head>
   <%- include('./partials/head') %>
-  <title>Create New Post - Blogify</title>
+  <title>Create New Article - Blogify Pro</title>
 </head>
 <body>
   <%- include('./partials/nav') %>
 
   <div class="container py-5">
     <div class="row">
-      <div class="col-lg-8 mx-auto">
-        <h2 class="text-center mb-4">Create New Post</h2>
+      <div class="col-lg-10 mx-auto">
+        <div class="text-center mb-5" data-aos="fade-up">
+          <h2 class="display-5 fw-bold">Create New Article</h2>
+          <p class="lead text-muted">Share your thoughts with the world</p>
+        </div>
         
         <% if (locals.error) { %>
-          <div class="alert alert-danger">
+          <div class="alert alert-danger" data-aos="fade-up">
+            <i class="fas fa-exclamation-triangle me-2"></i>
             <%= error %>
           </div>
         <% } %>
 
-        <div class="card shadow">
-          <div class="card-body p-4">
-            <form action="/blog" method="post" enctype="multipart/form-data">
-              <div class="mb-3">
-                <label for="coverImage" class="form-label">Cover Image</label>
-                <input type="file" class="form-control" id="coverImage" name="coverImage" accept="image/*">
-              </div>
-              
-              <div class="mb-3">
-                <label for="title" class="form-label">Title</label>
-                <input type="text" class="form-control" id="title" name="title" required>
-              </div>
-              
-              <div class="mb-3">
-                <label for="tags" class="form-label">Tags (comma separated)</label>
-                <input type="text" class="form-control" id="tags" name="tags" placeholder="technology, lifestyle, travel">
-              </div>
-              
-              <div class="mb-3">
-                <label for="body" class="form-label">Content</label>
-                <textarea name="body" class="form-control" id="body" rows="12" required></textarea>
-              </div>
-              
-              <div class="d-flex justify-content-between">
-                <a href="/" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">Publish Post</button>
+        <div class="card border-0 shadow-lg" data-aos="fade-up" data-aos-delay="200">
+          <div class="card-body p-5">
+            <form action="/blog" method="post" enctype="multipart/form-data" id="blogForm">
+              <div class="row">
+                <div class="col-lg-8">
+                  <!-- Cover Image Upload -->
+                  <div class="mb-4">
+                    <label for="coverImage" class="form-label fw-semibold">
+                      <i class="fas fa-image text-primary me-2"></i>Cover Image
+                    </label>
+                    <div class="border-2 border-dashed border-primary rounded p-4 text-center bg-light" 
+                         id="imageDropZone" 
+                         style="min-height: 200px; cursor: pointer;">
+                      <input type="file" class="d-none" id="coverImage" name="coverImage" accept="image/*">
+                      <div id="imagePreview" class="d-none">
+                        <img id="previewImg" class="img-fluid rounded" style="max-height: 200px;">
+                        <div class="mt-2">
+                          <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeImage()">
+                            <i class="fas fa-trash me-1"></i>Remove
+                          </button>
+                        </div>
+                      </div>
+                      <div id="imagePlaceholder">
+                        <i class="fas fa-cloud-upload-alt display-4 text-muted mb-3"></i>
+                        <h5 class="text-muted">Click or drag to upload cover image</h5>
+                        <p class="text-muted mb-0">PNG, JPG, GIF up to 5MB</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Title -->
+                  <div class="mb-4">
+                    <label for="title" class="form-label fw-semibold">
+                      <i class="fas fa-heading text-primary me-2"></i>Title *
+                    </label>
+                    <input type="text" 
+                           class="form-control form-control-lg" 
+                           id="title" 
+                           name="title" 
+                           placeholder="Enter your article title..." 
+                           required
+                           maxlength="100">
+                    <div class="form-text">
+                      <span id="titleCounter">0</span>/100 characters
+                    </div>
+                  </div>
+                  
+                  <!-- Content -->
+                  <div class="mb-4">
+                    <label for="body" class="form-label fw-semibold">
+                      <i class="fas fa-edit text-primary me-2"></i>Content *
+                    </label>
+                    <div class="position-relative">
+                      <textarea name="body" 
+                                class="form-control" 
+                                id="body" 
+                                rows="15" 
+                                placeholder="Start writing your amazing story..."
+                                required></textarea>
+                      <div class="position-absolute bottom-0 end-0 p-2 bg-white rounded">
+                        <small class="text-muted">
+                          <span id="wordCount">0</span> words • <span id="readTime">0</span> min read
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-lg-4">
+                  <!-- Publishing Options -->
+                  <div class="sidebar-card">
+                    <h6 class="fw-bold mb-3">
+                      <i class="fas fa-cog text-primary me-2"></i>Publishing Options
+                    </h6>
+                    
+                    <!-- Status -->
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Status</label>
+                      <select name="status" class="form-select">
+                        <option value="published">Publish Now</option>
+                        <option value="draft">Save as Draft</option>
+                      </select>
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="mb-3">
+                      <label for="tags" class="form-label fw-semibold">
+                        <i class="fas fa-tags text-primary me-2"></i>Tags
+                      </label>
+                      <input type="text" 
+                             class="form-control" 
+                             id="tags" 
+                             name="tags" 
+                             placeholder="technology, lifestyle, travel">
+                      <div class="form-text">Separate tags with commas</div>
+                      <div id="tagPreview" class="mt-2"></div>
+                    </div>
+
+                    <!-- Article Preview -->
+                    <div class="mb-4">
+                      <h6 class="fw-bold">Article Preview</h6>
+                      <div class="border rounded p-3 bg-light">
+                        <div id="previewCard">
+                          <div class="mb-2">
+                            <h6 class="mb-1" id="previewTitle">Your Title Here</h6>
+                            <small class="text-muted">By <%= user.fullName %></small>
+                          </div>
+                          <p class="text-muted small mb-0" id="previewContent">
+                            Start writing to see preview...
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                      <button type="submit" class="btn btn-primary btn-lg" name="action" value="publish">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        <span id="publishText">Publish Article</span>
+                      </button>
+                      <button type="submit" class="btn btn-outline-secondary" name="action" value="draft">
+                        <i class="fas fa-save me-2"></i>Save Draft
+                      </button>
+                      <a href="/" class="btn btn-outline-danger">
+                        <i class="fas fa-times me-2"></i>Cancel
+                      </a>
+                    </div>
+                  </div>
+
+                  <!-- Writing Tips -->
+                  <div class="sidebar-card">
+                    <h6 class="fw-bold mb-3">
+                      <i class="fas fa-lightbulb text-warning me-2"></i>Writing Tips
+                    </h6>
+                    <ul class="list-unstyled small">
+                      <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Use an engaging headline
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Add a compelling cover image
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Structure with paragraphs
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Use relevant tags
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Aim for 3-10 minute read
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </form>
           </div>
@@ -53,5 +189,196 @@
   </div>
 
   <%- include('./partials/scripts') %>
+
+  <script>
+    // Image upload functionality
+    const imageDropZone = document.getElementById('imageDropZone');
+    const coverImageInput = document.getElementById('coverImage');
+    const imagePreview = document.getElementById('imagePreview');
+    const imagePlaceholder = document.getElementById('imagePlaceholder');
+    const previewImg = document.getElementById('previewImg');
+
+    imageDropZone.addEventListener('click', () => coverImageInput.click());
+
+    imageDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      imageDropZone.classList.add('border-success');
+    });
+
+    imageDropZone.addEventListener('dragleave', () => {
+      imageDropZone.classList.remove('border-success');
+    });
+
+    imageDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      imageDropZone.classList.remove('border-success');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleImageUpload(files[0]);
+      }
+    });
+
+    coverImageInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleImageUpload(e.target.files[0]);
+      }
+    });
+
+    function handleImageUpload(file) {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          previewImg.src = e.target.result;
+          imagePlaceholder.classList.add('d-none');
+          imagePreview.classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function removeImage() {
+      coverImageInput.value = '';
+      imagePlaceholder.classList.remove('d-none');
+      imagePreview.classList.add('d-none');
+    }
+
+    // Title counter
+    const titleInput = document.getElementById('title');
+    const titleCounter = document.getElementById('titleCounter');
+    const previewTitle = document.getElementById('previewTitle');
+
+    titleInput.addEventListener('input', () => {
+      const count = titleInput.value.length;
+      titleCounter.textContent = count;
+      previewTitle.textContent = titleInput.value || 'Your Title Here';
+      
+      if (count > 80) {
+        titleCounter.classList.add('text-warning');
+      } else if (count > 90) {
+        titleCounter.classList.add('text-danger');
+      } else {
+        titleCounter.classList.remove('text-warning', 'text-danger');
+      }
+    });
+
+    // Word count and reading time
+    const bodyTextarea = document.getElementById('body');
+    const wordCount = document.getElementById('wordCount');
+    const readTime = document.getElementById('readTime');
+    const previewContent = document.getElementById('previewContent');
+
+    bodyTextarea.addEventListener('input', () => {
+      const text = bodyTextarea.value;
+      const words = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+      const minutes = Math.ceil(words / 200);
+
+      wordCount.textContent = words;
+      readTime.textContent = minutes;
+      
+      // Update preview
+      previewContent.textContent = text.substring(0, 100) + (text.length > 100 ? '...' : '') || 'Start writing to see preview...';
+    });
+
+    // Tag preview
+    const tagsInput = document.getElementById('tags');
+    const tagPreview = document.getElementById('tagPreview');
+
+    tagsInput.addEventListener('input', () => {
+      const tags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+      tagPreview.innerHTML = '';
+      
+      tags.forEach(tag => {
+        const tagElement = document.createElement('span');
+        tagElement.className = 'badge bg-primary me-1 mb-1';
+        tagElement.textContent = '#' + tag;
+        tagPreview.appendChild(tagElement);
+      });
+    });
+
+    // Status change handler
+    const statusSelect = document.querySelector('select[name="status"]');
+    const publishText = document.getElementById('publishText');
+
+    statusSelect.addEventListener('change', () => {
+      if (statusSelect.value === 'draft') {
+        publishText.textContent = 'Save Draft';
+      } else {
+        publishText.textContent = 'Publish Article';
+      }
+    });
+
+    // Form validation
+    document.getElementById('blogForm').addEventListener('submit', (e) => {
+      const title = titleInput.value.trim();
+      const body = bodyTextarea.value.trim();
+
+      if (!title || !body) {
+        e.preventDefault();
+        alert('Please fill in both title and content fields.');
+        return;
+      }
+
+      if (title.length > 100) {
+        e.preventDefault();
+        alert('Title must be 100 characters or less.');
+        return;
+      }
+    });
+
+    // Auto-save functionality (optional)
+    let autoSaveInterval;
+    function startAutoSave() {
+      autoSaveInterval = setInterval(() => {
+        const title = titleInput.value;
+        const body = bodyTextarea.value;
+        const tags = tagsInput.value;
+
+        if (title || body) {
+          // Save to localStorage as backup
+          localStorage.setItem('blogDraft', JSON.stringify({
+            title,
+            body,
+            tags,
+            timestamp: new Date().getTime()
+          }));
+        }
+      }, 30000); // Save every 30 seconds
+    }
+
+    // Load draft from localStorage
+    function loadDraft() {
+      const draft = localStorage.getItem('blogDraft');
+      if (draft) {
+        const data = JSON.parse(draft);
+        const hoursSinceLastSave = (new Date().getTime() - data.timestamp) / (1000 * 60 * 60);
+        
+        if (hoursSinceLastSave < 24) { // Only load if saved within last 24 hours
+          if (confirm('A draft was found. Would you like to restore it?')) {
+            titleInput.value = data.title;
+            bodyTextarea.value = data.body;
+            tagsInput.value = data.tags;
+            
+            // Trigger events to update counters
+            titleInput.dispatchEvent(new Event('input'));
+            bodyTextarea.dispatchEvent(new Event('input'));
+            tagsInput.dispatchEvent(new Event('input'));
+          }
+        }
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDraft();
+      startAutoSave();
+    });
+
+    // Clear draft on successful submission
+    window.addEventListener('beforeunload', () => {
+      if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+      }
+    });
+  </script>
 </body>
 </html>
