@@ -30,6 +30,23 @@ const userSchema = new Schema(
       enum: ["USER", "ADMIN"],
       default: "USER",
     },
+    bio: {
+      type: String,
+      maxlength: 500,
+      default: ""
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    followers: [{
+      type: Schema.Types.ObjectId,
+      ref: "user"
+    }],
+    following: [{
+      type: Schema.Types.ObjectId,
+      ref: "user"
+    }]
   },
   { timestamps: true }
 );
