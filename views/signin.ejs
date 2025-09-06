@@ -2,39 +2,125 @@
 <html lang="en">
 <head>
   <%- include('./partials/head') %>
-  <title>Sign In - Blogify</title>
+  <title>Sign In - Blogify Pro</title>
 </head>
 <body>
   <%- include('./partials/nav') %>
 
   <div class="container py-5">
-    <div class="row justify-content-center">
-      <div class="col-md-6 col-lg-4">
-        <div class="card shadow">
-          <div class="card-body p-4">
-            <h3 class="text-center mb-4">Sign In</h3>
-            
+    <div class="row justify-content-center min-vh-100 align-items-center">
+      <div class="col-md-8 col-lg-6 col-xl-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+          <div class="mb-4">
+            <div class="mx-auto bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                 style="width: 80px; height: 80px;">
+              <i class="fas fa-user text-white fa-2x"></i>
+            </div>
+          </div>
+          <h2 class="display-6 fw-bold">Welcome Back</h2>
+          <p class="lead text-muted">Sign in to continue your blogging journey</p>
+        </div>
+
+        <div class="card border-0 shadow-lg" data-aos="fade-up" data-aos-delay="200">
+          <div class="card-body p-5">
             <% if (locals.error) { %>
-              <div class="alert alert-danger">
-                <%= error %>
+              <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <div><%= error %></div>
               </div>
             <% } %>
 
-            <form action="/user/signin" method="post">
-              <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="email" name="email" required>
+            <form action="/user/signin" method="post" id="signinForm">
+              <div class="mb-4">
+                <label for="email" class="form-label fw-semibold">
+                  <i class="fas fa-envelope text-primary me-2"></i>Email Address
+                </label>
+                <input type="email" 
+                       class="form-control form-control-lg" 
+                       id="email" 
+                       name="email" 
+                       placeholder="Enter your email"
+                       required>
               </div>
-              <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required>
+
+              <div class="mb-4">
+                <label for="password" class="form-label fw-semibold">
+                  <i class="fas fa-lock text-primary me-2"></i>Password
+                </label>
+                <div class="position-relative">
+                  <input type="password" 
+                         class="form-control form-control-lg" 
+                         id="password" 
+                         name="password" 
+                         placeholder="Enter your password"
+                         required>
+                  <button type="button" 
+                          class="btn btn-link position-absolute end-0 top-0 h-100 px-3" 
+                          onclick="togglePassword()">
+                    <i class="fas fa-eye" id="passwordToggle"></i>
+                  </button>
+                </div>
               </div>
-              <button type="submit" class="btn btn-primary w-100">Sign In</button>
+
+              <div class="mb-4">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="rememberMe" name="rememberMe">
+                  <label class="form-check-label" for="rememberMe">
+                    Remember me for 30 days
+                  </label>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg w-100 mb-4">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+              </button>
             </form>
-            
-            <div class="text-center mt-3">
-              <p>Don't have an account? <a href="/user/signup">Sign Up</a></p>
+
+            <div class="text-center">
+              <div class="mb-3">
+                <span class="text-muted">Don't have an account?</span>
+                <a href="/user/signup" class="fw-semibold text-decoration-none">Sign Up</a>
+              </div>
+
+              <!-- Social Login Placeholder -->
+              <div class="border-top pt-4">
+                <p class="text-muted mb-3">Or continue with</p>
+                <div class="d-flex gap-2 justify-content-center">
+                  <button class="btn btn-outline-secondary flex-fill" type="button" disabled>
+                    <i class="fab fa-google me-2"></i>Google
+                  </button>
+                  <button class="btn btn-outline-secondary flex-fill" type="button" disabled>
+                    <i class="fab fa-github me-2"></i>GitHub
+                  </button>
+                </div>
+                <small class="text-muted mt-2 d-block">Social login coming soon!</small>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Features Preview -->
+        <div class="row mt-5" data-aos="fade-up" data-aos-delay="400">
+          <div class="col-4 text-center">
+            <div class="mb-3">
+              <i class="fas fa-edit fa-2x text-primary"></i>
+            </div>
+            <h6 class="fw-semibold">Easy Writing</h6>
+            <p class="text-muted small">Intuitive editor with rich formatting</p>
+          </div>
+          <div class="col-4 text-center">
+            <div class="mb-3">
+              <i class="fas fa-users fa-2x text-primary"></i>
+            </div>
+            <h6 class="fw-semibold">Community</h6>
+            <p class="text-muted small">Connect with fellow writers</p>
+          </div>
+          <div class="col-4 text-center">
+            <div class="mb-3">
+              <i class="fas fa-chart-line fa-2x text-primary"></i>
+            </div>
+            <h6 class="fw-semibold">Analytics</h6>
+            <p class="text-muted small">Track your article performance</p>
           </div>
         </div>
       </div>
@@ -42,5 +128,38 @@
   </div>
 
   <%- include('./partials/scripts') %>
+
+  <script>
+    function togglePassword() {
+      const passwordInput = document.getElementById('password');
+      const passwordToggle = document.getElementById('passwordToggle');
+      
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        passwordToggle.classList.remove('fa-eye');
+        passwordToggle.classList.add('fa-eye-slash');
+      } else {
+        passwordInput.type = 'password';
+        passwordToggle.classList.remove('fa-eye-slash');
+        passwordToggle.classList.add('fa-eye');
+      }
+    }
+
+    // Form validation
+    document.getElementById('signinForm').addEventListener('submit', function(e) {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        e.preventDefault();
+        alert('Please fill in all fields.');
+      }
+    });
+
+    // Auto-focus on email field
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('email').focus();
+    });
+  </script>
 </body>
 </html>
