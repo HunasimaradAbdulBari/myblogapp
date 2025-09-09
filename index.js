@@ -14,30 +14,34 @@ const Blog = require("./models/blog");
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// MongoDB connection with proper error handling and fixed URI
+// MongoDB connection with proper URL encoding and NO deprecated options
 const connectDB = async () => {
   try {
-    // Fix MongoDB URI encoding issue
+    // Your MongoDB URI with proper encoding
     let mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/blogify';
     
-    // If using the problematic URI, encode the password properly
+    // Fix the URI format - encode the password properly
     if (mongoURI.includes('Abdul@123')) {
-      mongoURI = mongoURI.replace('Abdul@123', encodeURIComponent('Abdul@123'));
+      mongoURI = mongoURI.replace('Abdul@123', 'Abdul%40123');
+    }
+    
+    // Add database name if not present
+    if (mongoURI.endsWith('.net/')) {
+      mongoURI += 'blogify';
     }
     
     console.log('Attempting to connect to MongoDB...');
     
+    // Connect with ONLY supported options for newer MongoDB driver
     const conn = await mongoose.connect(mongoURI, {
-      // Remove deprecated options
-      serverSelectionTimeoutMS: 10000, // 10 seconds timeout
-      socketTimeoutMS: 45000, // 45 seconds socket timeout
-      bufferCommands: false,
-      bufferMaxEntries: 0
+      serverSelectionTimeoutMS: 15000, // 15 seconds
+      socketTimeoutMS: 45000,          // 45 seconds
     });
     
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    console.log(`Database: ${conn.connection.name}`);
     
-    // Handle connection events
+    // Connection event handlers
     mongoose.connection.on('error', (err) => {
       console.error('MongoDB connection error:', err);
     });
@@ -51,13 +55,11 @@ const connectDB = async () => {
     });
     
   } catch (error) {
-    console.error("MongoDB connection error:", error);
+    console.error("MongoDB connection failed:", error.message);
+    console.log("Server will continue running without database connection");
     
-    // Don't exit the process, continue with limited functionality
-    console.log("Running without database connection. Some features may not work.");
-    
-    // Set a flag to indicate DB is not available
-    app.locals.dbAvailable = false;
+    // Don't exit process - continue without DB
+    app.locals.dbError = true;
   }
 };
 
@@ -76,30 +78,25 @@ app.use(cookieParser());
 app.use(checkForAuthenticationCookie("token"));
 app.use(express.static(path.resolve("./public")));
 
-// Database availability middleware
-const checkDBConnection = (req, res, next) => {
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).render('error', { 
-      user: req.user, 
-      error: 'Database temporarily unavailable. Please try again later.' 
-    });
-  }
-  next();
+// Database availability checker
+const isDBConnected = () => {
+  return mongoose.connection.readyState === 1;
 };
 
-// Enhanced home route with better error handling
+// Enhanced home route with database checks
 app.get('/', async (req, res) => {
   try {
-    // Check if database is available
-    if (mongoose.connection.readyState !== 1) {
+    // Check database connection
+    if (!isDBConnected()) {
+      console.log('Database not connected, serving static home page');
       return res.render('home', {
         user: req.user,
         blogs: [],
         currentPage: 1,
         totalPages: 1,
         totalBlogs: 0,
-        search: '',
-        tag: '',
+        search: req.query.search || '',
+        tag: req.query.tag || '',
         trendingTags: [],
         popularBlogs: [],
         dbError: true
@@ -122,39 +119,30 @@ app.get('/', async (req, res) => {
       query.tags = { $in: [tag] };
     }
 
-    // Use Promise.allSettled to handle individual query failures
-    const [blogsResult, tagsResult, popularResult] = await Promise.allSettled([
-      (async () => {
-        const totalBlogs = await Blog.countDocuments(query);
-        const totalPages = Math.ceil(totalBlogs / limit);
-        const skip = (page - 1) * limit;
-        
-        const allBlogs = await Blog.find(query)
-          .populate("createdBy")
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit);
-        
-        return { totalBlogs, totalPages, allBlogs };
-      })(),
-      
+    // Execute queries with timeout protection
+    const queryPromises = [
+      Blog.countDocuments(query).maxTimeMS(10000),
+      Blog.find(query)
+        .populate("createdBy")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .maxTimeMS(10000),
       Blog.aggregate([
         { $unwind: "$tags" },
         { $group: { _id: "$tags", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 10 }
-      ]),
-      
+      ]).maxTimeMS(5000),
       Blog.find()
         .populate("createdBy")
         .sort({ views: -1 })
         .limit(5)
-    ]);
+        .maxTimeMS(5000)
+    ];
 
-    // Extract results or use defaults
-    const { totalBlogs = 0, totalPages = 1, allBlogs = [] } = blogsResult.status === 'fulfilled' ? blogsResult.value : {};
-    const trendingTags = tagsResult.status === 'fulfilled' ? tagsResult.value : [];
-    const popularBlogs = popularResult.status === 'fulfilled' ? popularResult.value : [];
+    const [totalBlogs, allBlogs, trendingTags, popularBlogs] = await Promise.all(queryPromises);
+    const totalPages = Math.ceil(totalBlogs / limit);
 
     res.render('home', {
       user: req.user,
@@ -164,11 +152,14 @@ app.get('/', async (req, res) => {
       totalBlogs,
       search,
       tag,
-      trendingTags,
-      popularBlogs
+      trendingTags: trendingTags || [],
+      popularBlogs: popularBlogs || []
     });
+
   } catch (error) {
-    console.error("Error fetching home page data:", error);
+    console.error("Error loading home page:", error.message);
+    
+    // Render with empty data but show the page
     res.render('home', {
       user: req.user,
       blogs: [],
@@ -179,15 +170,15 @@ app.get('/', async (req, res) => {
       tag: req.query.tag || '',
       trendingTags: [],
       popularBlogs: [],
-      error: 'Unable to load content. Please refresh the page.'
+      error: 'Unable to load content. Please try refreshing the page.'
     });
   }
 });
 
-// API endpoint for blog stats with better error handling
+// API endpoint for blog stats
 app.get('/api/stats', async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    if (!isDBConnected()) {
       return res.json({
         totalBlogs: 0,
         totalViews: 0,
@@ -195,52 +186,55 @@ app.get('/api/stats', async (req, res) => {
       });
     }
     
-    const [totalBlogs, totalViewsResult] = await Promise.allSettled([
-      Blog.countDocuments(),
-      Blog.aggregate([
-        { $group: { _id: null, total: { $sum: "$views" } } }
-      ])
-    ]);
-    
-    const blogsCount = totalBlogs.status === 'fulfilled' ? totalBlogs.value : 0;
-    const viewsData = totalViewsResult.status === 'fulfilled' ? totalViewsResult.value : [];
+    const totalBlogs = await Blog.countDocuments().maxTimeMS(5000);
+    const totalViewsResult = await Blog.aggregate([
+      { $group: { _id: null, total: { $sum: "$views" } } }
+    ]).maxTimeMS(5000);
     
     res.json({
-      totalBlogs: blogsCount,
-      totalViews: viewsData[0]?.total || 0
+      totalBlogs,
+      totalViews: totalViewsResult[0]?.total || 0
     });
   } catch (error) {
-    console.error("Error fetching stats:", error);
-    res.status(500).json({ 
+    console.error("Stats API error:", error);
+    res.json({
       totalBlogs: 0,
       totalViews: 0,
-      error: 'Failed to fetch stats' 
+      error: 'Unable to fetch stats'
     });
   }
 });
 
-// Apply DB check middleware to routes that need database
+// Routes
 app.use('/user', userRoute);
-app.use('/blog', checkDBConnection, blogRoute);
+app.use('/blog', blogRoute);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    database: isDBConnected() ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // 404 handler
 app.use((req, res) => {
   res.status(404).render('404', { user: req.user });
 });
 
-// Enhanced error handler
+// Error handler
 app.use((error, req, res, next) => {
   console.error('Application error:', error.stack);
   
-  // Handle specific MongoDB errors
+  // Handle specific error types
   if (error.name === 'MongoNetworkError' || error.name === 'MongoTimeoutError') {
     return res.status(503).render('error', { 
       user: req.user, 
-      error: 'Database connection issue. Please try again later.' 
+      error: 'Database temporarily unavailable. Please try again in a few moments.' 
     });
   }
   
-  // Handle validation errors
   if (error.name === 'ValidationError') {
     return res.status(400).render('error', { 
       user: req.user, 
@@ -248,7 +242,7 @@ app.use((error, req, res, next) => {
     });
   }
   
-  // Generic error response
+  // Generic error
   res.status(500).render('error', { 
     user: req.user, 
     error: process.env.NODE_ENV === 'production' 
@@ -257,30 +251,25 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Graceful shutdown handling
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
+// Graceful shutdown
+const gracefulShutdown = async (signal) => {
+  console.log(`${signal} received, shutting down gracefully`);
   try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed');
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close();
+      console.log('MongoDB connection closed');
+    }
   } catch (error) {
-    console.error('Error closing MongoDB connection:', error);
+    console.error('Error during shutdown:', error);
   }
   process.exit(0);
-});
+};
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed');
-  } catch (error) {
-    console.error('Error closing MongoDB connection:', error);
-  }
-  process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 app.listen(PORT, () => {
-  console.log(`Server started at PORT: ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Server started at PORT: ${PORT}`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
 });
